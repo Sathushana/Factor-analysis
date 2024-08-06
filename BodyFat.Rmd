@@ -1,0 +1,203 @@
+---
+title: "BodyFat"
+author: "S18809"
+date: "2024-04-04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Load the Libraries
+library(psych) # Factor Analysis
+library(lavaan) # Confirmatory Analysis
+library(corrplot)
+```
+
+```{r}
+# Load the data set
+dat <- read.csv(file.choose(),header = TRUE)
+head(dat,10)
+```
+
+```{r}
+# Check the null value
+sum(is.na(dat))
+```
+```{r}
+str(dat)
+```
+
+```{r}
+# Find the dimension of the data set
+dim(dat)
+```
+```{r}
+# Find the Summary of the data set
+summary(dat)
+```
+```{r}
+bodyFat <- dat[,-2]
+```
+
+```{r}
+head(bodyFat)
+```
+# Exploratory Data Analysis
+
+```{r}
+#  Draw the Density plot
+par(mfrow = c(2,3))
+for (col in names(bodyFat)) {
+  plot(density(bodyFat[[col]]),
+       main = col,
+       xlab = "Value",
+       ylab = "Density")
+}
+mtext("Density plot of Each variables",side = 3,line = 3,cex = 1.1)
+```
+
+```{r}
+# Find the Correlation between each variables
+bodyFat.corr <- cor(bodyFat)
+bodyFat.corr
+```
+
+```{r}
+# Draw the Corr plots 
+corrplot(bodyFat.corr,
+         method = "color",
+         type = "lower")
+```
+
+```{r}
+# Find the mean of the each variables
+apply(bodyFat,2,mean)
+```
+```{r}
+# Find the Standard deviation of the data
+apply(bodyFat,2,var)
+```
+```{r}
+# Standardize the data Frame
+bodyFat.scale <- apply(bodyFat,2,scale)
+head(bodyFat.scale)
+```
+```{r}
+# Find the correlation between each variable in standardized data frame
+bodyFat.scale.corr <- cor(bodyFat.scale)
+bodyFat.scale.corr
+```
+
+```{r}
+# Draw Corr plot for standardized data 
+corrplot(bodyFat.scale.corr,
+         method = "color",
+         type = "lower")
+```
+
+```{r}
+# Calculate the eigen value for standardized data
+bodyFat.eigen <- eigen(bodyFat.scale.corr)
+bodyFat.eigen
+```
+
+```{r}
+# Find the total proportion of explained by each factor
+total_var = sum(bodyFat.eigen$values)
+cat("Total Varience of this data set: " ,total_var)
+```
+```{r}
+bodyFat.PVE <- bodyFat.eigen$values/total_var
+round(bodyFat.PVE,digits = 3)
+```
+```{r}
+# Cumulative variance of Each Factor
+cumsum(bodyFat.eigen$values)/total_var
+```
+
+
+```{r}
+# Draw the Scree plot
+plot(1:length(bodyFat.PVE),bodyFat.PVE,
+     type = "b",
+     xlab = "Factors",
+     ylab = " Total Proportion of varience ",
+     main = "Scree Plot for Factor Analysis")
+```
+# n_factors = 3
+
+```{r}
+?factanal
+```
+
+```{r}
+# Fit the Factor model with 3factor using maximum-likelihood method
+bodyFat.ml <- factanal(bodyFat.scale,
+                       factors = 3,
+                       rotation = "none")
+```
+
+
+```{r}
+bodyFat.ml
+```
+```{r}
+# Fit the Factor model with 3 factor using maximum-likelihood method
+bodyFat.ml.vari <- factanal(bodyFat.scale,
+                       factors = 3,
+                       scores = "regression",
+                       rotation = "varimax")
+```
+
+```{r}
+bodyFat.ml.vari
+```
+```{r}
+# Factor Loading
+bodyFat.ml.vari$loadings
+```
+
+
+```{r}
+head(bodyFat.ml.vari$scores)
+```
+
+# Confirmatory Factor Analysis
+```{r}
+bodyFat.ml.vari$loadings
+```
+Factor1 - Body Composition Factor -> (Density,Weight,Neck,Chest,Abdomen,Hip,Thigh,Knee,Biceps) - BCF
+
+Facor2 - Muscularity Factor -> (Weight,Height,Neck,Knee,Ankle,Biceps,Forearm,Wrist) - MF
+
+Factor3 - Age Factor -> (Age) - AF
+
+
+```{r}
+colnames(bodyFat)
+```
+
+```{r}
+# Create the Mode confirmatory Model
+bodyFat.cfa.model <- '
+BCF = ~Density+ Weight+ Neck+ Chest+ Abdomen+ Hip+ Thigh+ Knee+ Biceps
+MF = ~Weight+ Height+ Neck+ Knee+ Ankle+ Biceps+ Forearm+ Wrist
+AF = ~Age
+'
+```
+
+
+
+```{r}
+# Fit the CFA Model
+bodyFat.cfa.est <- cfa(bodyFat.cfa.model,bodyFat.scale)
+```
+
+```{r}
+summary(bodyFat.cfa.est,fit = TRUE )
+```
+
